@@ -2,6 +2,7 @@
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/sys/printk.h>
 #include <zephyr/device.h>
+#include <stdint.h>
 
 // --- Configuração de LEDs via DeviceTree ---
 #define LED_A_NODE DT_ALIAS(led0)  // LED verde
@@ -25,9 +26,20 @@ void thread_A(void *p1, void *p2, void *p3)
 
         gpio_pin_set_dt(&ledA, 1);  // Liga LED verde
 
+        // Mede o tempo de processamento
+        uint32_t inicio = k_cycle_get_32();
+
         // Simula processamento rápido 
         for (volatile int i = 0; i < 200000; i++) {}
 
+        uint32_t fim = k_cycle_get_32();
+
+        uint32_t ciclos = fim - inicio;
+        uint64_t tempo_us = k_cyc_to_us_floor64(ciclos);
+
+        printk("Thread A: %u ciclos, %llu us\n",
+               ciclos, (unsigned long long)tempo_us);
+        
         gpio_pin_set_dt(&ledA, 0);  // Desliga LED verde
    
         k_msleep(TEMPO_A_MS);       // Dorme — libera CPU
@@ -44,12 +56,22 @@ void thread_B(void *p1, void *p2, void *p3)
     while (1) {
         gpio_pin_set_dt(&ledB, 1);  // Liga LED vermelho
 
+        uint32_t inicio = k_cycle_get_32();
+
         // Simula processamento mais longo 
         for (volatile int i = 0; i < 10000000; i++) {
             if (i % 100000 == 0) {
                 // Aqui não imprimimos nada — apenas ocupamos a CPU
             }
         }
+
+        uint32_t fim = k_cycle_get_32();
+
+        uint32_t ciclos = fim - inicio;
+        uint64_t tempo_us = k_cyc_to_us_floor64(ciclos);
+
+        printk("Thread B: %u ciclos, %llu us\n",
+        ciclos, (unsigned long long)tempo_us);
 
         gpio_pin_set_dt(&ledB, 0);  // Desliga LED vermelho
         k_msleep(TEMPO_B_MS);       // Dorme um pouco
