@@ -3,6 +3,10 @@
 #include <zephyr/sys/printk.h>
 #include <zephyr/device.h>
 #include <stdint.h>
+#include <zephyr/logging/log.h>
+
+// Aciona o logging
+LOG_MODULE_REGISTER(dados, LOG_LEVEL_DBG);
 
 // Configuração do botão
 #define BUTTON_NODE DT_NODELABEL(user_button_0)
@@ -41,7 +45,7 @@ static void button_pressed(const struct device *port,
 
     if (now - last_press_time >= DEBOUNCE_MS) {
         last_press_time = now;
-        printk("\n>>> ISR: BOTAO PRESSIONADO! <<<\n \n");
+        LOG_DBG("\n>>> ISR: BOTAO PRESSIONADO! <<<\n \n");
     }
 }
 
@@ -65,7 +69,7 @@ void thread_A(void *p1, void *p2, void *p3)
         uint32_t ciclos = fim - inicio;
         uint64_t tempo_us = k_cyc_to_us_floor64(ciclos);
 
-        printk("Thread A: %u ciclos, %llu us\n",
+        LOG_INF("Thread A: %u ciclos, %llu us\n",
                ciclos, (unsigned long long)tempo_us);
         
         gpio_pin_set_dt(&ledA, 0);  // Desliga LED verde
@@ -98,7 +102,7 @@ void thread_B(void *p1, void *p2, void *p3)
         uint32_t ciclos = fim - inicio;
         uint64_t tempo_us = k_cyc_to_us_floor64(ciclos);
 
-        printk("Thread B: %u ciclos, %llu us\n",
+        LOG_INF("Thread B: %u ciclos, %llu us\n",
         ciclos, (unsigned long long)tempo_us);
 
         gpio_pin_set_dt(&ledB, 0);  // Desliga LED vermelho
@@ -129,14 +133,14 @@ void main(void){
 
     // Verificar se o botão está disponível
     if (!gpio_is_ready_dt(&button)) {
-        printk("ERRO: Botão não está disponível!\n");
+        LOG_ERR("ERRO: Botão não está disponível!\n");
         return;
     }
     
     // Configurar botão como entrada COM pull-up forçado
     gpio_pin_configure_dt(&button, GPIO_INPUT | GPIO_PULL_UP);
     
-    printk("Botão configurado: Porto %s, Pino %d (COM PULL-UP)\n", 
+    LOG_INF("Botão configurado: Porto %s, Pino %d (COM PULL-UP)\n", 
            button.port->name, button.pin);
 
     /* Inicializa a estrutura do callback */
@@ -148,8 +152,8 @@ void main(void){
     ret = gpio_add_callback(button.port, &button_cb);
 
     if (ret < 0) {
-        printk("Erro ao registrar callback: %d\n", ret);
-        return 0;
+        LOG_ERR("Erro ao registrar callback: %d\n", ret);
+        return;
     }
 
     /* Habilita a interrupcao na transicao para o estado ativo */
@@ -157,13 +161,13 @@ void main(void){
         &button, GPIO_INT_EDGE_TO_ACTIVE);
 
     if (ret < 0) {
-        printk("Erro ao configurar interrupcao: %d\n", ret);
-        return 0;
+        LOG_ERR("Erro ao configurar interrupcao: %d\n", ret);
+        return;
     }
 
-    printk("=== Demonstração de Preempção com LEDs ===\n");
-    printk("Thread A (vermelho): prioridade %d\n", PRIO_THREAD_A);
-    printk("Thread B (verde): prioridade %d\n", PRIO_THREAD_B);
+    LOG_INF("=== Demonstração de Preempção com LEDs ===\n");
+    LOG_INF("Thread A (verde): prioridade %d\n", PRIO_THREAD_A);
+    LOG_INF("Thread B (vermelho): prioridade %d\n", PRIO_THREAD_B);
 
     while (1) {
         k_sleep(K_FOREVER); // Main dorme para liberar CPU.
