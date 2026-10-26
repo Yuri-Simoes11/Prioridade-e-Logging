@@ -26,6 +26,10 @@ static const struct gpio_dt_spec ledB = GPIO_DT_SPEC_GET(LED_B_NODE, gpios);
 #define TEMPO_A_MS   1500   // Thread A dorme
 #define TEMPO_B_MS   1000   // Thread B dorme
 
+// Variáveis para a interrupção
+#define DEBOUNCE_MS 500
+static int64_t last_press_time;
+
 // ----------------------------------------------------
 // INTERRUPÇÃO ISR
 // ----------------------------------------------------
@@ -33,9 +37,13 @@ static void button_pressed(const struct device *port,
                            struct gpio_callback *cb,
                            gpio_port_pins_t pins)
 {
-    printk("\n>>> ISR: BOTAO PRESSIONADO! <<<\n");
-}
+    int64_t now = k_uptime_get();
 
+    if (now - last_press_time >= DEBOUNCE_MS) {
+        last_press_time = now;
+        printk("\n>>> ISR: BOTAO PRESSIONADO! <<<\n \n");
+    }
+}
 
 // ----------------------------------------------------
 // THREAD A — Tarefa curta, alta prioridade
